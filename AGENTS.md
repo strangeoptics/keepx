@@ -37,6 +37,7 @@ extension/
 frontend/
   index.html       Dashboard markup (Tailwind CDN)
   app.js           Dashboard logic; talks to the backend via relative paths (/api, /media)
+README.md          Project overview, setup, and usage documentation (German)
 ```
 
 ### Entry points
@@ -183,4 +184,4 @@ Match the existing style:
 - Image URLs from `pbs.twimg.com/media/` are upgraded to `name=orig` so full-resolution images are stored.
 - Links are normalized and deduplicated when saving. Existing database entries are not rewritten.
 - `.gitignore` excludes `backend/storage/`, `backend/logs/`, `backend/node_modules/`, `backend/tweets.db*`, and `start-telegram.ps1` (already-tracked files in Git remain tracked until removed from the index with `git rm --cached`).
-- There are no tests, linter, README, or configuration for the port.
+- There is no linter or configuration for the port in the extension.
