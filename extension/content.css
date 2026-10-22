@@ -1,0 +1,34 @@
+.toa-save-btn-wrap {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.toa-save-btn {
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(140deg, #047857, #059669);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.toa-save-btn:hover {
+  transform: translateY(-1px);
+}
+
+.toa-save-btn.is-saving {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.toa-save-btn.is-success {
+  background: linear-gradient(140deg, #1d4ed8, #2563eb);
+}
+
+.toa-save-btn.is-error {
+  background: linear-gradient(140deg, #b91c1c, #dc2626);
+}

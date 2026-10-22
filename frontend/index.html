@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KeepX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --ink: #111827;
+        --paper: #f8fafc;
+        --accent: #0f766e;
+        --accent-2: #1d4ed8;
+      }
+      body {
+        background:
+          radial-gradient(circle at 10% 10%, rgba(14, 116, 144, 0.15), transparent 32%),
+          radial-gradient(circle at 90% 90%, rgba(29, 78, 216, 0.16), transparent 28%),
+          var(--paper);
+        color: var(--ink);
+      }
+      .tweet-text-collapsed {
+        max-height: 20em;
+        overflow: hidden;
+        position: relative;
+        cursor: pointer;
+      }
+      .tweet-text-collapsed::after {
+        content: "...";
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        padding-left: 0.25rem;
+        background: white;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <div class="mx-auto w-full max-w-[1700px] px-3 py-4 md:px-6 xl:px-10">
+      <header class="mb-4 rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm backdrop-blur md:p-4">
+        <div>
+          <h1 class="text-2xl font-black tracking-tight text-slate-900">KeepX</h1>
+          <p class="mt-1 text-sm text-slate-600">
+            Lokale Archivierung, Suche und Tagging deiner gespeicherten X/Twitter-Beitraege.
+            <span id="status" class="ml-1 text-slate-500"></span>
+          </p>
+        </div>
+        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Suche in Text, Name oder Handle..."
+            class="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 outline-none ring-teal-500 focus:ring-2"
+          />
+          <div class="flex flex-wrap gap-2">
+            <button
+              id="refreshBtn"
+              class="rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white transition hover:bg-slate-700"
+            >
+              Aktualisieren
+            </button>
+            <button
+              id="importBtn"
+              class="rounded-xl bg-teal-700 px-4 py-2 font-semibold text-white transition hover:bg-teal-600"
+            >
+              Import
+            </button>
+            <button
+              id="backupBtn"
+              class="rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Backup
+            </button>
+            <button
+              id="settingsBtn"
+              class="rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Einstellungen
+            </button>
+          </div>
+        </div>
+        <div class="mt-2" id="tagFilters"></div>
+      </header>
+
+      <main>
+        <section id="tweetGrid" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"></section>
+        <div id="loadMoreSentinel" class="h-8"></div>
+      </main>
+    </div>
+
+    <dialog id="importDialog" class="w-full max-w-xl rounded-2xl p-0 shadow-xl backdrop:bg-slate-950/60">
+      <form id="importForm" class="p-6">
+        <h2 class="text-xl font-bold text-slate-900">Tweets importieren</h2>
+        <p class="mt-1 text-sm text-slate-600">Ein oder mehrere Tweet-Links einfuegen (je Zeile oder durch Leerzeichen getrennt).</p>
+        <textarea
+          id="importUrls"
+          rows="8"
+          class="mt-4 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none ring-teal-500 focus:ring-2"
+          placeholder="https://x.com/user/status/123..."
+        ></textarea>
+        <div id="importResults" class="mt-3 max-h-48 overflow-y-auto text-sm"></div>
+        <div class="mt-4 flex justify-end gap-2">
+          <button id="importCancelBtn" type="button" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Schliessen</button>
+          <button id="importSubmitBtn" type="submit" class="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-600 disabled:opacity-60">Importieren</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="backupDialog" class="w-full max-w-xl rounded-2xl p-0 shadow-xl backdrop:bg-slate-950/60">
+      <section class="p-6">
+        <h2 class="text-xl font-bold text-slate-900">Datensicherung (JSONL)</h2>
+        <p class="mt-1 text-sm text-slate-600">
+          Datenbank-Bestand ohne Mediendateien als JSONL-Datei exportieren oder wiederherstellen.
+        </p>
+
+        <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <h3 class="font-semibold text-slate-900">Datenbank exportieren</h3>
+          <p class="mt-1 text-xs text-slate-600">
+            Speichert alle Tweets, Notizen, Tags, Links, Medien-Metadaten und den Telegram-Status als JSONL-Datei.
+          </p>
+          <a
+            id="exportJsonlBtn"
+            href="/api/backup/export"
+            download
+            class="mt-3 inline-flex items-center rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-600"
+          >
+            JSONL herunterladen
+          </a>
+        </div>
+
+        <form id="backupImportForm" class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <h3 class="font-semibold text-slate-900">Datenbank importieren</h3>
+          <p class="mt-1 text-xs text-slate-600">
+            Importiert neue Datensaetze aus einer JSONL-Datei. Bereits vorhandene Tweets werden uebersprungen.
+          </p>
+          <input
+            id="backupFileInput"
+            type="file"
+            accept=".jsonl,.ndjson,application/x-ndjson,text/plain"
+            class="mt-3 block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700"
+          />
+          <div id="backupImportResults" class="mt-3 text-sm" aria-live="polite"></div>
+          <div class="mt-3 flex justify-end">
+            <button
+              id="backupImportSubmitBtn"
+              type="submit"
+              class="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-600 disabled:opacity-60"
+            >
+              JSONL importieren
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-5 flex justify-end">
+          <button
+            id="backupCloseBtn"
+            type="button"
+            class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Schliessen
+          </button>
+        </div>
+      </section>
+    </dialog>
+
+    <dialog id="settingsDialog" class="w-full max-w-xl rounded-2xl p-0 shadow-xl backdrop:bg-slate-950/60">
+      <section class="p-6">
+        <h2 class="text-xl font-bold text-slate-900">Einstellungen</h2>
+        <div class="mt-5">
+          <div class="flex items-center justify-between gap-4">
+            <label for="tweetTextSize" class="font-semibold text-slate-700">Schriftgroesse der Tweet-Texte</label>
+            <output id="tweetTextSizeValue" for="tweetTextSize" class="text-sm font-semibold text-slate-600"></output>
+          </div>
+          <input
+            id="tweetTextSize"
+            type="range"
+            min="12"
+            max="24"
+            step="1"
+            class="mt-3 w-full accent-teal-700"
+          />
+          <div class="mt-1 flex justify-between text-xs text-slate-500">
+            <span>Klein</span>
+            <span>Gross</span>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-2">
+          <button id="resetSettingsBtn" type="button" class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Zuruecksetzen</button>
+          <button id="settingsCloseBtn" type="button" class="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-600">Fertig</button>
+        </div>
+      </section>
+    </dialog>
+
+    <div id="imageLightbox" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/85 p-4">
+      <button
+        id="lightboxCloseBtn"
+        type="button"
+        class="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300/30 bg-slate-900/70 text-xl text-white hover:bg-slate-800"
+        aria-label="Bildansicht schliessen"
+        title="Schliessen"
+      >
+        ×
+      </button>
+      <img id="lightboxImage" class="max-h-[92vh] max-w-[96vw] rounded-lg object-contain" alt="Vergroessertes Tweet-Bild" />
+    </div>
+
+    <template id="tweetCardTemplate">
+      <article class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 class="font-bold text-slate-900 tweet-author-name"></h2>
+            <p class="text-sm text-slate-500 tweet-author-handle"></p>
+          </div>
+          <p class="text-xs text-slate-400 tweet-date"></p>
+        </div>
+        <div class="tweet-text text-sm leading-relaxed text-slate-700"></div>
+        <button
+          class="tweet-text-toggle mt-1 hidden text-xs font-semibold text-teal-700 hover:underline"
+          type="button"
+          aria-expanded="false"
+        >
+          Mehr anzeigen
+        </button>
+        <div class="mt-3 grid grid-cols-2 gap-2 tweet-media"></div>
+
+        <div class="mt-4 flex flex-wrap gap-2 tweet-tags"></div>
+
+        <form class="mt-3 flex gap-2 tag-form">
+          <div class="tag-input-wrap relative min-w-0 flex-1">
+            <input
+              type="text"
+              class="tag-input w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none ring-teal-500 focus:ring-2"
+              placeholder="Tag hinzufuegen (z.B. Politik)"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+            />
+            <div
+              class="tag-suggestions absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+              role="listbox"
+            ></div>
+          </div>
+          <button class="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-600" type="submit">
+            +
+          </button>
+        </form>
+
+        <details class="tweet-notes-details mt-3">
+          <summary class="cursor-pointer text-xs font-semibold text-slate-500 marker:text-teal-700 hover:text-teal-700">
+            Recherche
+          </summary>
+          <form class="mt-2 border-t border-slate-100 pt-3 tweet-notes-form">
+            <textarea
+              class="tweet-notes w-full resize-none overflow-hidden rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-teal-500 focus:ring-2"
+              rows="3"
+              aria-label="Recherche"
+              placeholder="Eigene Gedanken oder Links (z.B. Gemini-Chat) festhalten..."
+            ></textarea>
+            <div class="tweet-notes-links mt-2 hidden flex-wrap gap-1.5"></div>
+            <div class="mt-2 flex items-center justify-between gap-2">
+              <span class="tweet-notes-status text-xs text-slate-500" aria-live="polite"></span>
+              <button
+                class="rounded-lg border border-teal-200 px-3 py-1.5 text-xs font-semibold text-teal-700 hover:bg-teal-50 disabled:opacity-60"
+                type="submit"
+              >
+                Notiz speichern
+              </button>
+            </div>
+          </form>
+        </details>
+
+        <div class="mt-3 flex justify-end gap-2">
+          <a
+            class="open-ai-link-btn hidden h-9 w-9 items-center justify-center rounded-full border border-indigo-200 text-base leading-none text-indigo-600 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+            title="KI-Unterhaltung oeffnen"
+            aria-label="KI-Unterhaltung oeffnen"
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            ✨
+          </a>
+          <a
+            class="open-original-btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-sky-200 text-lg leading-none text-sky-600 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+            title="Original Tweet oeffnen"
+            aria-label="Original Tweet oeffnen"
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            ↗
+          </a>
+          <button
+            class="delete-btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 text-lg leading-none text-rose-600 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+            title="Tweet loeschen"
+            aria-label="Tweet loeschen"
+            type="button"
+          >
+            🗑
+          </button>
+        </div>
+      </article>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

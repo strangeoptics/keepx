@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "KeepX",
+  "description": "Speichert X/Twitter-Posts lokal mit KeepX.",
+  "version": "1.0.0",
+  "permissions": [],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
