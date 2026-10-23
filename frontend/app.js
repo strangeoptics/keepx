@@ -42,8 +42,14 @@ function updateTweetTextOverflow(tweetText, initialize = false) {
   const toggle = tweetText.nextElementSibling;
   if (!toggle || !toggle.classList.contains("tweet-text-toggle")) return;
 
+  if (tweetText.classList.contains("hidden")) {
+    tweetText.classList.remove("tweet-text-collapsed");
+    toggle.classList.add("hidden");
+    return;
+  }
+
   const fontSize = Number.parseFloat(getComputedStyle(tweetText).fontSize);
-  const isLong = tweetText.scrollHeight > fontSize * 20 + 1;
+  const isLong = tweetText.scrollHeight > fontSize * 11 + 2;
   if (!isLong) {
     tweetText.classList.remove("tweet-text-collapsed");
     toggle.classList.add("hidden");
@@ -71,7 +77,13 @@ function formatDate(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString();
+  return date.toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 function compactText(value) {
@@ -232,7 +244,9 @@ function renderTweetText(tweet) {
     const trimmed = line.trim();
 
     if (!trimmed) {
-      container.appendChild(document.createElement("br"));
+      const spacer = document.createElement("div");
+      spacer.className = "h-1.5";
+      container.appendChild(spacer);
       i += 1;
       continue;
     }
@@ -401,10 +415,15 @@ function renderTweets(tweets, append = false) {
     card.querySelector(".tweet-author-name").textContent = tweet.author_name || "Unbekannt";
     card.querySelector(".tweet-author-handle").textContent = tweet.author_handle ? `@${tweet.author_handle}` : "";
     card.querySelector(".tweet-date").textContent = formatDate(tweet.created_at || tweet.saved_at);
+
     const tweetText = card.querySelector(".tweet-text");
     tweetText.innerHTML = "";
     tweetText.style.fontSize = `${tweetTextSizeInput.value}px`;
-    tweetText.appendChild(renderTweetText(tweet));
+    if (compactText(tweet.text || "")) {
+      tweetText.appendChild(renderTweetText(tweet));
+    } else {
+      tweetText.classList.add("hidden");
+    }
 
     const textToggle = card.querySelector(".tweet-text-toggle");
     textToggle.addEventListener("click", () => {
@@ -432,6 +451,11 @@ function renderTweets(tweets, append = false) {
         uniqueMedia.push(item);
       });
 
+      if (uniqueMedia.length > 0) {
+        mediaWrap.classList.remove("hidden");
+        mediaWrap.classList.add("grid");
+      }
+
       if (uniqueMedia.length === 1) {
         mediaWrap.classList.replace("grid-cols-2", "grid-cols-1");
       }
@@ -441,7 +465,7 @@ function renderTweets(tweets, append = false) {
           const video = document.createElement("video");
           video.controls = true;
           video.preload = "none";
-          video.className = "col-span-2 w-full rounded-lg bg-black";
+          video.className = "col-span-2 max-h-80 w-full rounded-lg bg-black";
           video.dataset.src = `${MEDIA_BASE}/${encodeURIComponent(item.local_path)}`;
           mediaWrap.appendChild(video);
           videoObserver.observe(video);
@@ -450,7 +474,7 @@ function renderTweets(tweets, append = false) {
 
         const img = document.createElement("img");
         img.loading = "lazy";
-        img.className = "max-h-[32rem] w-full cursor-zoom-in rounded-lg object-contain bg-slate-50";
+        img.className = "max-h-80 w-full cursor-zoom-in rounded-lg object-contain bg-slate-50";
         img.src = `${MEDIA_BASE}/${encodeURIComponent(item.local_path)}`;
         img.alt = "Lokales Tweet-Medium";
         const isCardImage = String(item.original_url || "").includes("/card_img/");
@@ -476,7 +500,7 @@ function renderTweets(tweets, append = false) {
     const appendTagPill = (tag) => {
       const pill = document.createElement("button");
       pill.type = "button";
-      pill.className = "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-rose-100 hover:text-rose-700";
+      pill.className = "inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600 transition hover:bg-rose-50 hover:text-rose-600";
       pill.title = "Tag entfernen";
       pill.textContent = `${tag.name} ×`;
       pill.addEventListener("click", async () => {
@@ -499,7 +523,6 @@ function renderTweets(tweets, append = false) {
           if (currentTag && currentTag.toLocaleLowerCase() === tag.name.toLocaleLowerCase()) {
             removeCardFromGrid(card);
           }
-
         } catch (err) {
           updateStatus(err.message);
         }
@@ -508,6 +531,7 @@ function renderTweets(tweets, append = false) {
     };
     tags.forEach(appendTagPill);
 
+    const tagAddBtn = card.querySelector(".tag-add-btn");
     const form = card.querySelector(".tag-form");
     const input = card.querySelector(".tag-input");
     const suggestions = card.querySelector(".tag-suggestions");
@@ -524,6 +548,23 @@ function renderTweets(tweets, append = false) {
       input.removeAttribute("aria-activedescendant");
       activeSuggestion = -1;
     };
+
+    const openTagInput = () => {
+      tagAddBtn.classList.add("hidden");
+      form.classList.remove("hidden");
+      form.classList.add("inline-flex");
+      input.focus();
+    };
+
+    const closeTagInput = () => {
+      closeSuggestions();
+      input.value = "";
+      form.classList.add("hidden");
+      form.classList.remove("inline-flex");
+      tagAddBtn.classList.remove("hidden");
+    };
+
+    tagAddBtn.addEventListener("click", openTagInput);
 
     const renderSuggestions = () => {
       const query = input.value.trim().toLocaleLowerCase();
@@ -547,13 +588,13 @@ function renderTweets(tweets, append = false) {
         option.id = `${suggestionId}-option-${index}`;
         option.setAttribute("role", "option");
         option.setAttribute("aria-selected", "false");
-        option.className = "block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-teal-50";
+        option.className = "block w-full px-2.5 py-1.5 text-left text-xs text-slate-700 hover:bg-teal-50";
         option.textContent = tag.name;
         option.addEventListener("pointerdown", (event) => event.preventDefault());
         option.addEventListener("click", () => {
           input.value = tag.name;
           closeSuggestions();
-          input.focus();
+          form.requestSubmit();
         });
         suggestions.appendChild(option);
       });
@@ -587,16 +628,27 @@ function renderTweets(tweets, append = false) {
         event.preventDefault();
         input.value = matchingTags[activeSuggestion].name;
         closeSuggestions();
+        form.requestSubmit();
       } else if (event.key === "Escape") {
+        event.preventDefault();
+        closeTagInput();
+      }
+    });
+    input.addEventListener("blur", () => {
+      if (!input.value.trim()) {
+        closeTagInput();
+      } else {
         closeSuggestions();
       }
     });
-    input.addEventListener("blur", closeSuggestions);
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const tagValue = input.value.trim();
-      if (!tagValue) return;
+      if (!tagValue) {
+        closeTagInput();
+        return;
+      }
       closeSuggestions();
       try {
         const savedTag = await addTag(tweet.id, tagValue);
@@ -609,7 +661,7 @@ function renderTweets(tweets, append = false) {
           knownTags.sort((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: "base" }));
           buildFilterBar();
         }
-        input.value = "";
+        closeTagInput();
         if (untaggedOnly) {
           removeCardFromGrid(card);
         }
@@ -618,14 +670,28 @@ function renderTweets(tweets, append = false) {
       }
     });
 
-    const notesDetails = card.querySelector(".tweet-notes-details");
-    const notesSummary = notesDetails.querySelector("summary");
+    const notesToggleBtn = card.querySelector(".notes-toggle-btn");
     const notesForm = card.querySelector(".tweet-notes-form");
     const notesInput = card.querySelector(".tweet-notes");
     const notesLinksWrap = card.querySelector(".tweet-notes-links");
     const notesStatus = card.querySelector(".tweet-notes-status");
     const notesSaveButton = notesForm.querySelector("button[type='submit']");
     const openAiLinkBtn = card.querySelector(".open-ai-link-btn");
+
+    const updateNotesToggleState = (text) => {
+      const trimmed = String(text || "").trim();
+      const hasNote = Boolean(trimmed);
+      notesToggleBtn.classList.toggle("bg-teal-50", hasNote);
+      notesToggleBtn.classList.toggle("text-teal-700", hasNote);
+      notesToggleBtn.classList.toggle("hover:bg-teal-100", hasNote);
+      notesToggleBtn.classList.toggle("text-slate-400", !hasNote);
+      notesToggleBtn.classList.toggle("hover:bg-slate-100", !hasNote);
+      notesToggleBtn.classList.toggle("hover:text-slate-700", !hasNote);
+      notesToggleBtn.title = hasNote
+        ? `Notiz: ${trimmed.slice(0, 120)}${trimmed.length > 120 ? "..." : ""}`
+        : "Recherche / Notiz hinzufuegen";
+    };
+
     const updateNoteLinksUi = (text) => {
       const urls = extractNoteUrls(text);
       notesLinksWrap.replaceChildren();
@@ -635,6 +701,7 @@ function renderTweets(tweets, append = false) {
         openAiLinkBtn.classList.add("hidden");
         openAiLinkBtn.classList.remove("inline-flex");
         openAiLinkBtn.removeAttribute("href");
+        openAiLinkBtn.textContent = "";
         return;
       }
 
@@ -646,8 +713,8 @@ function renderTweets(tweets, append = false) {
         chip.rel = "noreferrer noopener";
         chip.title = item.title;
         chip.className = item.isAi
-          ? "inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"
-          : "inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100";
+          ? "inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[11px] font-medium text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"
+          : "inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[11px] font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100";
         chip.textContent = item.label;
         notesLinksWrap.appendChild(chip);
       });
@@ -658,42 +725,53 @@ function renderTweets(tweets, append = false) {
       openAiLinkBtn.href = primaryItem.url;
       openAiLinkBtn.title = primaryItem.title;
       openAiLinkBtn.setAttribute("aria-label", primaryItem.title);
+      openAiLinkBtn.textContent = `${primaryItem.isAi ? "✨" : "↗"} ${primaryItem.label}`;
       openAiLinkBtn.classList.remove("hidden");
       openAiLinkBtn.classList.add("inline-flex");
     };
+
     const savedNotes = tweet.notes || "";
     const resizeNotesInput = () => {
       notesInput.style.height = "auto";
-      notesInput.style.height = `${notesInput.scrollHeight}px`;
+      notesInput.style.height = `${Math.max(44, notesInput.scrollHeight)}px`;
     };
 
     notesInput.value = savedNotes;
-    if (savedNotes.trim()) {
-      notesDetails.open = true;
-      notesSummary.textContent = "Recherche";
-    }
-    resizeNotesInput();
+    updateNotesToggleState(savedNotes);
     updateNoteLinksUi(savedNotes);
+
+    notesToggleBtn.addEventListener("click", () => {
+      const isHidden = notesForm.classList.toggle("hidden");
+      notesToggleBtn.setAttribute("aria-expanded", String(!isHidden));
+      if (!isHidden) {
+        resizeNotesInput();
+        notesInput.focus();
+      }
+    });
+
     notesInput.addEventListener("input", () => {
       resizeNotesInput();
       updateNoteLinksUi(notesInput.value);
     });
-    notesDetails.addEventListener("toggle", () => {
-      if (notesDetails.open) resizeNotesInput();
-    });
+
     notesForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       notesSaveButton.disabled = true;
       notesStatus.textContent = "Speichere...";
       notesStatus.classList.remove("text-rose-600");
-      notesStatus.classList.add("text-slate-500");
+      notesStatus.classList.add("text-slate-400");
       try {
         await saveTweetNotes(tweet.id, notesInput.value);
-        notesStatus.textContent = "Notiz gespeichert";
-        notesSummary.textContent = "Recherche";
+        notesStatus.textContent = "Gespeichert";
+        updateNotesToggleState(notesInput.value);
+        setTimeout(() => {
+          if (notesStatus.textContent === "Gespeichert") {
+            notesStatus.textContent = "";
+          }
+        }, 1500);
       } catch (error) {
         notesStatus.textContent = error.message;
-        notesStatus.classList.remove("text-slate-500");
+        notesStatus.classList.remove("text-slate-400");
         notesStatus.classList.add("text-rose-600");
       } finally {
         notesSaveButton.disabled = false;
@@ -712,18 +790,17 @@ function renderTweets(tweets, append = false) {
     deleteBtn.addEventListener("click", async () => {
       if (!window.confirm("Diesen Tweet wirklich loeschen?")) return;
       try {
-          const data = await deleteTweet(tweet.id);
-          if (Array.isArray(data.tags)) {
-            knownTags = data.tags;
-          }
-          if (currentTag && !knownTags.some((item) => item.name.toLocaleLowerCase() === currentTag.toLocaleLowerCase())) {
-            currentTag = "";
-            await loadTweets({ reset: true });
-            return;
-          }
-          buildFilterBar();
-          removeCardFromGrid(card);
-
+        const data = await deleteTweet(tweet.id);
+        if (Array.isArray(data.tags)) {
+          knownTags = data.tags;
+        }
+        if (currentTag && !knownTags.some((item) => item.name.toLocaleLowerCase() === currentTag.toLocaleLowerCase())) {
+          currentTag = "";
+          await loadTweets({ reset: true });
+          return;
+        }
+        buildFilterBar();
+        removeCardFromGrid(card);
       } catch (err) {
         updateStatus(err.message);
       }

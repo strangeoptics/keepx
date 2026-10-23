@@ -20,7 +20,7 @@
         color: var(--ink);
       }
       .tweet-text-collapsed {
-        max-height: 20em;
+        max-height: 11em;
         overflow: hidden;
         position: relative;
         cursor: pointer;
@@ -30,9 +30,10 @@
         position: absolute;
         right: 0;
         bottom: 0;
-        padding-left: 0.25rem;
-        background: white;
+        padding-left: 1.5rem;
+        background: linear-gradient(to right, transparent, white 45%);
         font-weight: 700;
+        color: #0f766e;
       }
     </style>
   </head>
@@ -84,7 +85,7 @@
       </header>
 
       <main>
-        <section id="tweetGrid" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"></section>
+        <section id="tweetGrid" class="grid items-start gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"></section>
         <div id="loadMoreSentinel" class="h-8"></div>
       </main>
     </div>
@@ -206,98 +207,124 @@
     </div>
 
     <template id="tweetCardTemplate">
-      <article class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div class="mb-3 flex items-start justify-between gap-3">
-          <div>
-            <h2 class="font-bold text-slate-900 tweet-author-name"></h2>
-            <p class="text-sm text-slate-500 tweet-author-handle"></p>
+      <article class="flex flex-col rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-sm">
+        <div class="mb-1.5 flex items-baseline justify-between gap-2">
+          <div class="flex min-w-0 items-baseline gap-1.5">
+            <h2 class="truncate text-sm font-bold text-slate-900 tweet-author-name"></h2>
+            <p class="truncate text-xs text-slate-400 tweet-author-handle"></p>
           </div>
-          <p class="text-xs text-slate-400 tweet-date"></p>
+          <p class="shrink-0 text-[11px] text-slate-400 tweet-date"></p>
         </div>
-        <div class="tweet-text text-sm leading-relaxed text-slate-700"></div>
+
+        <div class="tweet-text text-sm leading-snug text-slate-700"></div>
         <button
-          class="tweet-text-toggle mt-1 hidden text-xs font-semibold text-teal-700 hover:underline"
+          class="tweet-text-toggle mt-0.5 hidden self-start text-[11px] font-semibold text-teal-700 hover:underline"
           type="button"
           aria-expanded="false"
         >
           Mehr anzeigen
         </button>
-        <div class="mt-3 grid grid-cols-2 gap-2 tweet-media"></div>
 
-        <div class="mt-4 flex flex-wrap gap-2 tweet-tags"></div>
+        <div class="mt-2 hidden grid-cols-2 gap-1.5 tweet-media"></div>
 
-        <form class="mt-3 flex gap-2 tag-form">
-          <div class="tag-input-wrap relative min-w-0 flex-1">
-            <input
-              type="text"
-              class="tag-input w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none ring-teal-500 focus:ring-2"
-              placeholder="Tag hinzufuegen (z.B. Politik)"
-              role="combobox"
-              aria-autocomplete="list"
-              aria-expanded="false"
-            />
-            <div
-              class="tag-suggestions absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
-              role="listbox"
-            ></div>
-          </div>
-          <button class="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-600" type="submit">
-            +
-          </button>
-        </form>
-
-        <details class="tweet-notes-details mt-3">
-          <summary class="cursor-pointer text-xs font-semibold text-slate-500 marker:text-teal-700 hover:text-teal-700">
-            Recherche
-          </summary>
-          <form class="mt-2 border-t border-slate-100 pt-3 tweet-notes-form">
-            <textarea
-              class="tweet-notes w-full resize-none overflow-hidden rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none ring-teal-500 focus:ring-2"
-              rows="3"
-              aria-label="Recherche"
-              placeholder="Eigene Gedanken oder Links (z.B. Gemini-Chat) festhalten..."
-            ></textarea>
-            <div class="tweet-notes-links mt-2 hidden flex-wrap gap-1.5"></div>
-            <div class="mt-2 flex items-center justify-between gap-2">
-              <span class="tweet-notes-status text-xs text-slate-500" aria-live="polite"></span>
+        <div class="mt-2 flex items-center justify-between gap-1.5 border-t border-slate-100 pt-1.5">
+          <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+            <div class="contents tweet-tags"></div>
+            <button
+              type="button"
+              class="tag-add-btn inline-flex items-center rounded-md border border-dashed border-slate-300 px-1.5 py-0.5 text-[11px] font-medium text-slate-400 transition hover:border-teal-500 hover:text-teal-700"
+              title="Tag hinzufuegen"
+            >
+              + Tag
+            </button>
+            <form class="tag-form relative hidden items-center gap-1">
+              <div class="tag-input-wrap relative">
+                <input
+                  type="text"
+                  class="tag-input w-28 rounded-md border border-teal-500 bg-white px-1.5 py-0.5 text-xs outline-none ring-1 ring-teal-500"
+                  placeholder="Tag..."
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded="false"
+                />
+                <div
+                  class="tag-suggestions absolute left-0 top-full z-20 mt-1 hidden max-h-36 w-40 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                  role="listbox"
+                ></div>
+              </div>
               <button
-                class="rounded-lg border border-teal-200 px-3 py-1.5 text-xs font-semibold text-teal-700 hover:bg-teal-50 disabled:opacity-60"
+                class="rounded-md bg-teal-700 px-1.5 py-0.5 text-xs font-semibold text-white hover:bg-teal-600"
+                type="submit"
+                title="Tag speichern"
+              >
+                +
+              </button>
+            </form>
+          </div>
+
+          <div class="flex shrink-0 items-center gap-0.5">
+            <a
+              class="open-ai-link-btn hidden h-6 items-center gap-1 rounded-md border border-indigo-200/80 bg-indigo-50/80 px-1.5 text-[11px] font-medium text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"
+              title="KI-Unterhaltung oeffnen"
+              aria-label="KI-Unterhaltung oeffnen"
+              target="_blank"
+              rel="noreferrer noopener"
+            ></a>
+            <button
+              type="button"
+              class="notes-toggle-btn inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              title="Recherche / Notiz"
+              aria-label="Recherche / Notiz"
+              aria-expanded="false"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4.5h12M4 9.5h12M4 14.5h7" />
+              </svg>
+            </button>
+            <a
+              class="open-original-btn inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 transition hover:bg-sky-50 hover:text-sky-600"
+              title="Original Tweet oeffnen"
+              aria-label="Original Tweet oeffnen"
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 14L14 6M8 6h6v6" />
+              </svg>
+            </a>
+            <button
+              class="delete-btn inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+              title="Tweet loeschen"
+              aria-label="Tweet loeschen"
+              type="button"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 6h11M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6m-6 0l.65 9.1a1 1 0 001 .9h4.7a1 1 0 001-.9L14 6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <form class="tweet-notes-form mt-2 hidden border-t border-slate-100 pt-2">
+          <textarea
+            class="tweet-notes w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-1.5 text-xs outline-none ring-teal-500 focus:bg-white focus:ring-1"
+            rows="2"
+            aria-label="Recherche"
+            placeholder="Notiz oder KI-Link (z.B. Gemini, ChatGPT)..."
+          ></textarea>
+          <div class="mt-1.5 flex flex-wrap items-center justify-between gap-1.5">
+            <div class="tweet-notes-links hidden flex-wrap gap-1"></div>
+            <div class="ml-auto flex items-center gap-2">
+              <span class="tweet-notes-status text-[11px] text-slate-400" aria-live="polite"></span>
+              <button
+                class="rounded-md bg-teal-700 px-2 py-1 text-[11px] font-semibold text-white hover:bg-teal-600 disabled:opacity-60"
                 type="submit"
               >
-                Notiz speichern
+                Speichern
               </button>
             </div>
-          </form>
-        </details>
-
-        <div class="mt-3 flex justify-end gap-2">
-          <a
-            class="open-ai-link-btn hidden h-9 w-9 items-center justify-center rounded-full border border-indigo-200 text-base leading-none text-indigo-600 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
-            title="KI-Unterhaltung oeffnen"
-            aria-label="KI-Unterhaltung oeffnen"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            ✨
-          </a>
-          <a
-            class="open-original-btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-sky-200 text-lg leading-none text-sky-600 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
-            title="Original Tweet oeffnen"
-            aria-label="Original Tweet oeffnen"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            ↗
-          </a>
-          <button
-            class="delete-btn inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 text-lg leading-none text-rose-600 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
-            title="Tweet loeschen"
-            aria-label="Tweet loeschen"
-            type="button"
-          >
-            🗑
-          </button>
-        </div>
+          </div>
+        </form>
       </article>
     </template>
 
